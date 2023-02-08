@@ -4,6 +4,9 @@ const { User } = require("../models/index");
 const games = require('../games.json');
 const axios = require('axios');
 const fs = require("fs");
+const midtransClient = require('midtrans-client');
+const { log } = require("console");
+
 
 class Controller {
 
@@ -126,8 +129,8 @@ class Controller {
                         delete el.source,
                         delete el.title,
                         delete el.urlToImage
-                        delete el.publishedAt
-                        delete el.content
+                    delete el.publishedAt
+                    delete el.content
 
                 } else if (el.author === null || el.content === null) {
                     return {
@@ -156,7 +159,7 @@ class Controller {
             res.status(200).json(resultNews)
 
         }).catch(function (error) {
-            console.log(err);
+
             res.status(500).json({ message: "Internal server error" })
         });
     }
@@ -168,7 +171,7 @@ class Controller {
         try {
 
             // const id = 985810
-            const dataId = [570, 985810, 500, 1748528, 578080, 1172470, 601150, 397540]
+            const dataId = [570, 985810, 500, 1748528, 578080, 1172470, 601150, 397540, 1811950]
 
             const dataTotalUrl = []
             for (let i = 0; i < dataId.length; i++) {
@@ -244,6 +247,52 @@ class Controller {
             res.status(200).json(array)
         } catch (err) {
             res.status(500).json({ message: "Internal server eror" })
+        }
+    }
+
+    static async generateMitransToken(req, res) {
+        try {
+            // console.log(req.userLogin.id,"iniiiii");
+            let findUser = await User.findOne({
+                where: {
+                    id: req.userLogin.id
+                }
+            })
+            if (findUser.status === "paid") {
+                throw ({ name: "Already paid" })
+            }
+
+            let snap = new midtransClient.Snap({
+                // Set to true if you want Production Environment (accept real transaction).
+                isProduction: false,
+                // serverKey: process.env.MITRANS-SERVER-KEY
+                serverKey:"SB-Mid-server-8zF3hYnLlqiwn_pfBbqMw0MR"
+            });
+
+            let parameter = {
+                "transaction_details": {
+                    "order_id": "Transaction" + Math.floor(10000 * Math.random + 900000),
+                    "gross_amount": 100000
+                },
+                "credit_card": {
+                    "secure": true
+                },
+                "customer_details": {
+                    "email": req.userLogin.email
+
+                }
+            };
+            const mitransToken = await snap.createTransaction(parameter)
+            console.log(mitransToken);
+            res.status(201).json(mitransToken)
+        } catch (err) {
+            console.log(err);
+            if (err.name === "Already paid") {
+                res.status(400).json({ message: "Already paid" })
+            } else {
+                res.status(500).json({ message: "Internal server eror" })
+            }
+
         }
     }
 }

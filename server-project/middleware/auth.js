@@ -23,6 +23,8 @@ const authorized = async (req, res, next) => {
         if (!data) {
             throw ({ name: "Invalid token" })
         }
+        req.userLogin = data
+        
         next()
     } catch (err) {
         console.log(err);
